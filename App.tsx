@@ -60,18 +60,14 @@ function App() {
   return (
     <HashRouter>
       <Routes>
-        <Route
-          path="/login"
-          element={
-            currentUser ? (
-              <Navigate to="/dashboard" />
-            ) : (
-              <Login setCurrentUser={setCurrentUser} />
+        <Route 
+  path="/login" 
+  element={currentUser ? <Navigate to="/dashboard" /> : <Login setCurrentUser={setCurrentUser} />} 
+/>
             )
-          }
+        }
         />
-
-        <Route
+                <Route
           path="/register"
           element={
             currentUser ? (
