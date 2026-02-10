@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import { supabase } from '../App';
-import { UserRole } from '../types';
 
 interface LoginProps {
   setCurrentUser: (user: any) => void;
@@ -34,25 +33,26 @@ const Login: React.FC<LoginProps> = ({ setCurrentUser }) => {
     const userId = data.user.id;
 
     // BUSCA PERFIL
-    let { data: profile } = await supabase
+    let { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
       .single();
 
     // SE NÃO EXISTIR → CRIA
-    if (!profile) {
-      const { data: newProfile, error } = await supabase
+    if (profileError || !profile) {
+      const { data: newProfile, error: insertError } = await supabase
         .from('profiles')
         .insert({
           id: userId,
           email: data.user.email,
-          role: UserRole.USER,
+          role: 'user',
         })
         .select()
         .single();
 
-      if (error) {
+      if (insertError) {
+        console.error(insertError);
         setError('Erro ao criar perfil');
         return;
       }
