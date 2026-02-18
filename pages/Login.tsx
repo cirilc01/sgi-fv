@@ -33,33 +33,50 @@ const Login: React.FC<LoginProps> = ({ setCurrentUser }) => {
     const userId = data.user.id;
 
     // BUSCA PERFIL
-    let { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
+    const { data: profiles, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId);
+
+let profile = profiles?.[0] ?? null;
 
     // SE NÃO EXISTIR → CRIA
-    if (profileError || !profile) {
-      const { data: newProfile, error: insertError } = await supabase
-        .from('profiles')
-        .insert({
-          id: userId,
-          email: data.user.email,
-          role: 'user',
-        })
-        .select()
-        .single();
+    if (profileError) {
+  console.error(profileError);
+  setError('Erro ao buscar perfil');
+  return;
+}
 
-      if (insertError) {
-        console.error(insertError);
-        setError('Erro ao criar perfil');
-        return;
-      }
+if (!profile) {
+  const { data: inserted, error: insertError } = await supabase
+    .from('profiles')
+    .insert([{
+      id: userId,
+      email: data.user.email,
+      role: 'user',
+      nome_completo: data.user.user_metadata?.name ?? null, // se sua coluna existir
+    }])
+    .select('*');
 
-      profile = newProfile;
+  // Se falhar por duplicado, busca de novo (corrige race condition)
+  if (insertError) {
+    console.error(insertError);
+
+    const { data: retryProfiles, error: retryError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId);
+
+    if (retryError || !retryProfiles || retryProfiles.length === 0) {
+      setError('Perfil do usuário não encontrado no sistema SGI.');
+      return;
     }
 
+    profile = retryProfiles[0];
+  } else {
+    profile = inserted?.[0] ?? null;
+  }
+}
     setCurrentUser(profile);
     navigate('/dashboard');
   };
